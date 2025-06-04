@@ -33,6 +33,10 @@ class DataGenerator:
             return f"'{value}'"
         elif base_type in ('INT', 'INTEGER'):
             return str(random.randint(1, 1000))
+        elif base_type == 'BIGINT':
+            return str(random.randint(1, 1000000000))  # Up to 1 billion
+        elif base_type == 'BIT':
+            return str(random.randint(0, 1))  # 0 or 1
         elif base_type in ('DECIMAL', 'FLOAT', 'DOUBLE'):
             scale = precision if precision else 2
             value = round(random.uniform(0, 1000), scale)

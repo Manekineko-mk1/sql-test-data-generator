@@ -27,6 +27,10 @@ class SchemaParser:
                 content = f.read()
             logging.debug(f"Raw content of {file_path}:\n{content}\n")
             
+            # Remove single-line comments (-- until end of line)
+            content = re.sub(r'--.*?\n', '\n', content)
+            logging.debug(f"Content after removing comments:\n{content}\n")
+            
             # Extract table name
             table_match = re.search(r'CREATE\s+TABLE\s+(\w+)\s*\(', content, re.IGNORECASE)
             if not table_match:

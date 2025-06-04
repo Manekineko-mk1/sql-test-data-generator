@@ -1,2 +1,35 @@
-/.qodo
+# Python bytecode and cache
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Output directory (optional, if you don't want to commit generated SQL)
+output/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python packaging and build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
