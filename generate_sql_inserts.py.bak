@@ -1,0 +1,265 @@
+import os
+import re
+import random
+import string
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional
+import argparse
+
+class SchemaError(Exception):
+    """Custom exception for schema-related errors."""
+    pass
+
+class SchemaParser:
+    """Parses SQL schema files to extract table names and column definitions."""
+    
+    @staticmethod
+    def parse_schema(file_path: Path) -> Tuple[str, Dict[str, str]]:
+        """
+        Parse a SQL schema file to extract table name and columns with their full data type specifications.
+        
+        Args:
+            file_path: Path to the schema file.
+        
+        Returns:
+            Tuple of table name and dictionary of column names to full data type strings.
+        
+        Raises:
+            SchemaError: If file is invalid or schema cannot be parsed.
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            print(f"DEBUG: Raw content of {file_path}:\n{content}\n")
+            
+            # Extract table name
+            table_match = re.search(r'CREATE\s+TABLE\s+(\w+)\s*\(', content, re.IGNORECASE)
+            if not table_match:
+                raise SchemaError(f"No valid CREATE TABLE statement found in {file_path}")
+            table_name = table_match.group(1)
+            print(f"DEBUG: Extracted table name: {table_name}")
+            
+            # Extract column section, accounting for nested parentheses
+            column_content = ""
+            paren_count = 0
+            in_columns = False
+            i = 0
+            while i < len(content):
+                if content[i] == '(' and not in_columns:
+                    in_columns = True
+                    i += 1
+                    continue
+                if in_columns:
+                    if content[i] == '(':
+                        paren_count += 1
+                    elif content[i] == ')':
+                        if paren_count == 0:
+                            break
+                        paren_count -= 1
+                    column_content += content[i]
+                i += 1
+            column_content = column_content.strip()
+            print(f"DEBUG: Extracted column content:\n{column_content}\n")
+            
+            if not column_content:
+                raise SchemaError(f"No columns found in {file_path}")
+            
+            # Split column definitions by commas, respecting nested parentheses
+            columns_list = []
+            current = ''
+            paren_count = 0
+            for char in column_content:
+                if char == '(':
+                    paren_count += 1
+                elif char == ')':
+                    paren_count -= 1
+                elif char == ',' and paren_count == 0:
+                    if current.strip():
+                        columns_list.append(current.strip())
+                    current = ''
+                    continue
+                current += char
+            if current.strip():
+                columns_list.append(current.strip())
+            print(f"DEBUG: Split column definitions: {columns_list}\n")
+            
+            columns = {}
+            for column_def in columns_list:
+                column_def = column_def.strip()
+                print(f"DEBUG: Processing column definition: {column_def}")
+                if not column_def or column_def.upper().startswith(('PRIMARY', 'FOREIGN', 'CONSTRAINT')):
+                    print(f"DEBUG: Skipping non-column definition: {column_def}")
+                    continue
+                # Parse column name and data type
+                parts = re.match(r'(\w+)\s+(.+)', column_def, re.IGNORECASE)
+                if parts:
+                    column_name = parts.group(1).strip('`')
+                    data_type_full = parts.group(2).strip().upper()
+                    columns[column_name] = data_type_full
+                    print(f"DEBUG: Parsed column: {column_name} = {data_type_full}")
+                else:
+                    print(f"DEBUG: Failed to parse column definition: {column_def}")
+            
+            if not columns:
+                raise SchemaError(f"No valid columns parsed in {file_path}")
+            print(f"DEBUG: Final parsed columns: {columns}\n")
+            
+            return table_name, columns
+        except Exception as e:
+            raise SchemaError(f"Error parsing schema {file_path}: {str(e)}")
+
+class DataGenerator:
+    """Generates random test data based on column data type specifications."""
+
+    @staticmethod
+    def generate_value(full_data_type: str, is_shared: bool = False, shared_values: Optional[List[Dict[str, str]]] = None, column_name: Optional[str] = None) -> str:
+        # Parse the data type
+        type_match = re.match(r'(\w+)(\((\d+)(,(\d+))?\))?(\s+NOT\s+NULL)?', full_data_type, re.IGNORECASE)
+        if not type_match:
+            return "'Unknown'"
+        
+        base_type = type_match.group(1).upper()
+        length = int(type_match.group(3)) if type_match.group(3) else None
+        precision = int(type_match.group(5)) if type_match.group(5) else None
+        
+        if base_type in ('CHAR', 'VARCHAR'):
+            gen_length = length if length else random.randint(5, 20)
+            value = ''.join(random.choices(string.ascii_letters, k=gen_length))
+            return f"'{value}'"
+        elif base_type in ('INT', 'INTEGER'):
+            return str(random.randint(1, 1000))
+        elif base_type in ('DECIMAL', 'FLOAT', 'DOUBLE'):
+            scale = precision if precision else 2
+            value = round(random.uniform(0, 1000), scale)
+            return str(value)
+        elif base_type in ('DATE', 'DATETIME'):
+            start_date = datetime(2020, 1, 1)
+            days_offset = random.randint(0, 365 * 5)
+            random_date = start_date + timedelta(days=days_offset)
+            return f"'{random_date.strftime('%Y-%m-%d')}'"
+        elif base_type == 'BOOLEAN':
+            return random.choice(['TRUE', 'FALSE'])
+        else:
+            return "'Unknown'"
+
+class SQLGenerator:
+    """Generates SQL INSERT statements based on schema and shared fields."""
+    
+    def __init__(self, schema_dir: str = 'schema', output_dir: str = 'output', num_records: int = 5):
+        self.schema_dir = Path(schema_dir)
+        self.output_dir = Path(output_dir)
+        self.num_records = num_records
+        self.output_dir.mkdir(exist_ok=True)
+    
+    def read_shared_fields(self, shared_fields_file: Path) -> List[str]:
+        """Read shared fields from a text file (comma-separated per line)."""
+        try:
+            with open(shared_fields_file, 'r') as f:
+                lines = f.readlines()
+            shared_fields = []
+            for line in lines:
+                fields = [field.strip() for field in line.split(',') if field.strip()]
+                shared_fields.extend(fields)
+            return shared_fields
+        except Exception as e:
+            raise SchemaError(f"Error reading shared fields file {shared_fields_file}: {str(e)}")
+    
+    def validate_shared_fields(self, shared_fields: List[str], schemas: List[Tuple[str, Dict[str, str]]]) -> None:
+        """Validate that shared fields exist in all schemas."""
+        for field in shared_fields:
+            for table_name, columns in schemas:
+                if field not in columns:
+                    raise SchemaError(f"Shared field '{field}' not found in table '{table_name}'")
+    
+    def generate_shared_values(self, shared_fields: List[str], schemas: List[Tuple[str, Dict[str, str]]]) -> List[Dict[str, str]]:
+        shared_values = []
+        for _ in range(self.num_records):
+            record_values = {}
+            for field in shared_fields:
+                data_type = next(columns[field] for _, columns in schemas if field in columns)
+                record_values[field] = DataGenerator.generate_value(data_type, is_shared=False)
+            shared_values.append(record_values)
+        return shared_values    
+    
+    
+    def generate_insert_statements(self) -> List[Tuple[str, List[str]]]:
+        schemas = []
+        shared_fields = []
+        
+        # Parse all schema files
+        schema_files = list(self.schema_dir.glob('*.sql'))
+        if not schema_files:
+            raise SchemaError(f"No schema files found in {self.schema_dir}")
+        
+        for schema_file in schema_files:
+            schemas.append(SchemaParser.parse_schema(schema_file))
+        print(f"DEBUG: All parsed schemas: {schemas}\n")
+        
+        # Read shared fields if provided
+        shared_fields_file = self.schema_dir / 'shared_fields.txt'
+        if shared_fields_file.exists():
+            shared_fields = self.read_shared_fields(shared_fields_file)
+            self.validate_shared_fields(shared_fields, schemas)
+        
+        # Generate shared values for consistent data
+        shared_values = self.generate_shared_values(shared_fields, schemas) if shared_fields else None
+        print(f"DEBUG: Shared values: {shared_values}\n")
+        
+        # Generate INSERT statements, grouped by table
+        insert_statements = []
+        for table_name, columns in schemas:
+            table_statements = []
+            for record_idx in range(self.num_records):
+                columns_list = list(columns.keys())
+                values = []
+                for col in columns_list:
+                    if col in shared_fields and shared_values:
+                        value = shared_values[record_idx][col]
+                    else:
+                        value = DataGenerator.generate_value(columns[col])
+                    values.append(value)
+                insert_sql = f"INSERT INTO {table_name} ({', '.join(columns_list)}) VALUES ({', '.join(values)});"
+                table_statements.append(insert_sql)
+            insert_statements.append((table_name, table_statements))
+        
+        return insert_statements    
+    
+    def run(self) -> None:
+        """Generate and output INSERT statements."""
+        try:
+            insert_statements = self.generate_insert_statements()
+            
+            # Print to console
+            for table_name, statements in insert_statements:
+                for stmt in statements:
+                    print(stmt)
+                print("****")
+            
+            # Write to output file
+            output_file = self.output_dir / 'output.sql'
+            with open(output_file, 'w') as f:
+                for table_name, statements in insert_statements:
+                    for stmt in statements:
+                        f.write(stmt + '\n')
+                    f.write("****\n")
+            print(f"\nGenerated INSERT statements written to {output_file}")
+        
+        except SchemaError as e:
+            print(f"Error: {str(e)}")
+            exit(1)
+        except Exception as e:
+            print(f"Unexpected error: {str(e)}")
+            exit(1)
+
+def main():
+    """Main function to parse arguments and run the SQL generator."""
+    parser = argparse.ArgumentParser(description='Generate SQL INSERT statements from schema files.')
+    parser.add_argument('--num_records', type=int, default=5, help='Number of records to generate per table (default: 5)')
+    args = parser.parse_args()
+    
+    generator = SQLGenerator(num_records=args.num_records)
+    generator.run()
+
+if __name__ == '__main__':
+    main()

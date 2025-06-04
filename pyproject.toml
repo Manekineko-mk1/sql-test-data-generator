@@ -1,0 +1,11 @@
+# pyproject.toml
+[project]
+name = "sql-test-data-generator"
+version = "0.1.0"
+description = "A tool to generate SQL INSERT statements from schema files"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+generate-sql-inserts = "generate_sql_inserts:main"
