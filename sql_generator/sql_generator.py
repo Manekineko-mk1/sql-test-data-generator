@@ -1,6 +1,7 @@
 # sql_generator/sql_generator.py
 from pathlib import Path
 from typing import List
+import logging
 from .schema_parser import SchemaParser
 from .data_generator import DataGenerator
 from .exceptions import SchemaError
@@ -58,7 +59,7 @@ class SQLGenerator:
         
         for schema_file in schema_files:
             schemas.append(SchemaParser.parse_schema(schema_file))
-        print(f"DEBUG: All parsed schemas: {schemas}\n")
+        logging.debug(f"All parsed schemas: {schemas}\n")
         
         # Read shared fields if provided
         shared_fields_file = self.schema_dir / 'shared_fields.txt'
@@ -68,7 +69,7 @@ class SQLGenerator:
         
         # Generate shared values for consistent data
         shared_values = self.generate_shared_values(shared_fields, schemas) if shared_fields else None
-        print(f"DEBUG: Shared values: {shared_values}\n")
+        logging.debug(f"Shared values: {shared_values}\n")
         
         # Generate INSERT statements, grouped by table
         insert_statements = []
@@ -97,8 +98,8 @@ class SQLGenerator:
             # Print to console
             for table_name, statements in insert_statements:
                 for stmt in statements:
-                    print(stmt)
-                print("****")
+                    logging.info(stmt)
+                logging.info("****")
             
             # Write to output file
             output_file = self.output_dir / 'output.sql'
@@ -107,11 +108,11 @@ class SQLGenerator:
                     for stmt in statements:
                         f.write(stmt + '\n')
                     f.write("****\n")
-            print(f"\nGenerated INSERT statements written to {output_file}")
+            logging.info(f"\nGenerated INSERT statements written to {output_file}")
         
         except SchemaError as e:
-            print(f"Error: {str(e)}")
+            logging.error(f"Error: {str(e)}")
             exit(1)
         except Exception as e:
-            print(f"Unexpected error: {str(e)}")
+            logging.error(f"Unexpected error: {str(e)}")
             exit(1)

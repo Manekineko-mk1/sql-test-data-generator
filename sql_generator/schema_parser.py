@@ -1,5 +1,6 @@
 # sql_generator/schema_parser.py
 import re
+import logging
 from pathlib import Path
 from .exceptions import SchemaError
 from .types import Schema
@@ -24,14 +25,14 @@ class SchemaParser:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            print(f"DEBUG: Raw content of {file_path}:\n{content}\n")
+            logging.debug(f"Raw content of {file_path}:\n{content}\n")
             
             # Extract table name
             table_match = re.search(r'CREATE\s+TABLE\s+(\w+)\s*\(', content, re.IGNORECASE)
             if not table_match:
                 raise SchemaError(f"No valid CREATE TABLE statement found in {file_path}")
             table_name = table_match.group(1)
-            print(f"DEBUG: Extracted table name: {table_name}")
+            logging.debug(f"Extracted table name: {table_name}")
             
             # Extract column section, accounting for nested parentheses
             column_content = ""
@@ -53,7 +54,7 @@ class SchemaParser:
                     column_content += content[i]
                 i += 1
             column_content = column_content.strip()
-            print(f"DEBUG: Extracted column content:\n{column_content}\n")
+            logging.debug(f"Extracted column content:\n{column_content}\n")
             
             if not column_content:
                 raise SchemaError(f"No columns found in {file_path}")
@@ -75,14 +76,14 @@ class SchemaParser:
                 current += char
             if current.strip():
                 columns_list.append(current.strip())
-            print(f"DEBUG: Split column definitions: {columns_list}\n")
+            logging.debug(f"Split column definitions: {columns_list}\n")
             
             columns = {}
             for column_def in columns_list:
                 column_def = column_def.strip()
-                print(f"DEBUG: Processing column definition: {column_def}")
+                logging.debug(f"Processing column definition: {column_def}")
                 if not column_def or column_def.upper().startswith(('PRIMARY', 'FOREIGN', 'CONSTRAINT')):
-                    print(f"DEBUG: Skipping non-column definition: {column_def}")
+                    logging.debug(f"Skipping non-column definition: {column_def}")
                     continue
                 # Parse column name and data type
                 parts = re.match(r'(\w+)\s+(.+)', column_def, re.IGNORECASE)
@@ -90,13 +91,13 @@ class SchemaParser:
                     column_name = parts.group(1).strip('`')
                     data_type_full = parts.group(2).strip().upper()
                     columns[column_name] = data_type_full
-                    print(f"DEBUG: Parsed column: {column_name} = {data_type_full}")
+                    logging.debug(f"Parsed column: {column_name} = {data_type_full}")
                 else:
-                    print(f"DEBUG: Failed to parse column definition: {column_def}")
+                    logging.debug(f"Failed to parse column definition: {column_def}")
             
             if not columns:
                 raise SchemaError(f"No valid columns parsed in {file_path}")
-            print(f"DEBUG: Final parsed columns: {columns}\n")
+            logging.debug(f"Final parsed columns: {columns}\n")
             
             return table_name, columns
         except Exception as e:
