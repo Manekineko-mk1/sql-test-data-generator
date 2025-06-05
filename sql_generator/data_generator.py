@@ -13,13 +13,13 @@ class DataGenerator:
         Generate a random value based on the full SQL data type specification.
         
         Args:
-            full_data_type: Full SQL data type (e.g., 'CHAR(2) NOT NULL', 'VARCHAR(50)', 'DECIMAL(5,3)').
+            full_data_type: Full SQL data type (e.g., 'CHAR(2) NOT NULL', 'VARCHAR(50)', 'DECIMAL(5, 3)').
         
         Returns:
             A string representation of the generated value.
         """
         # Parse the data type
-        regex = r'(\w+)\s*(?:\((\d+)(?:,(\d+))?\))?\s*(\bNOT\s+NULL)?'
+        regex = r'(\w+)\s*(?:\((\d+)\s*(?:,\s*(\d+))?\))?\s*(\bNOT\s+NULL)?'
         type_match = re.match(regex, full_data_type, re.IGNORECASE)
         if not type_match:
             return "'Unknown'"
