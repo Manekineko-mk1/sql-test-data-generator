@@ -2,6 +2,7 @@
 
 This Python tool generates SQL `INSERT` statements with test data based on SQL schema files and optional shared fields. It ensures consistent data for shared fields across tables, making it ideal for generating test data for relational databases with cross-referenced tables. The project uses a modular design for maintainability and extensibility.
 
+
 ## Features
 - Parses SQL `CREATE TABLE` statements from `.sql` files in the `schema/` directory.
 - Supports shared fields via `schema/shared_fields.txt` (comma-separated fields) to ensure identical values across tables.
@@ -12,31 +13,34 @@ This Python tool generates SQL `INSERT` statements with test data based on SQL s
 - Debug mode via `--debug` flag to display detailed parsing and generation logs.
 - Modular architecture with separate modules for schema parsing, data generation, and SQL generation.
 
+
 ## Requirements
 - Python 3.8+
 - No external dependencies required.
 
+
 ## Directory Structure
 ```
 sql-test-data-generator/
-├── sql_generator/
+├── sql_generator/            # Core package
 │   ├── init.py
-│   ├── schema_parser.py      # Schema parsing logic
-│   ├── data_generator.py     # Random test data generation
-│   ├── sql_generator.py      # INSERT statement generation
+│   ├── schema_parser.py      # Parses SQL schemas
+│   ├── data_generator.py     # Generates random data based on SQL types
+│   ├── sql_generator.py      # Coordinates generation
 │   ├── exceptions.py         # Custom exceptions
-│   ├── types.py              # Shared type hints
-├── schema/
-│   ├── test_schema_1.sql     # Example schema file
-│   ├── test_schema_2.sql     # Example schema file
+│   ├── types.py              # Type hints
+├── schema/                   # Input SQL schemas
+│   ├── test_schema_1.sql     
+│   ├── test_schema_2.sql     
 │   └── shared_fields.txt     # Optional: Comma-separated shared fields
-├── output/
+├── output/                   # Created automatically by the script
 │   └── output.sql            # Generated INSERT statements
-├── generate_sql_inserts.py   # Main script
+├── generate_sql_inserts.py   # Main script to run the generator
 ├── README.md                 # This file
-├── requirements.txt          # Empty (no dependencies)
+├── AI-GUIDE.md               # Guide for AI tools to assist with the project
 └── pyproject.toml            # Optional: Package metadata
 ```
+
 
 ## Schema File Format
 Schema files must contain valid SQL `CREATE TABLE` statements. 
@@ -73,7 +77,6 @@ TYP_VVCF, weight
 Shared fields ensure identical values across tables (e.g., `TYP_VVCF='XI'`, `weight=810` in both `test_schema_1` and `test_schema_2` for the same row).
 
 
-
 ## Usage
 - Place your schema files (`.sql`) in the schema directory.
 - Optionally, create a `shared_fields.txt` file in the schema directory listing shared fields.
@@ -89,6 +92,7 @@ Shared fields ensure identical values across tables (e.g., `TYP_VVCF='XI'`, `wei
     - Ensure shared fields have identical values across tables.
     - Print statements to the console.
     - Save statements to output/output.sql, with table statements separated by `****`.
+
 
 ## Example Output
 For `test_schema_1.sql` and `test_schema_2.sql` with shared fields `TYP_VVCF` and `weight`, and `--num_records 3`:
@@ -109,6 +113,7 @@ DEBUG: Raw content of schema\test_schema_1.sql: ...
 DEBUG: Shared values: [{'TYP_VVCF': "'XI'", 'weight': '810'}, ...]
 ```
 
+
 ## Error Handling
 - Exits with an error message if:
     - Schema files are invalid or missing.
@@ -116,11 +121,11 @@ DEBUG: Shared values: [{'TYP_VVCF': "'XI'", 'weight': '810'}, ...]
     - Other parsing or file issues occur.
 - Debug logs (with `--debug`) provide detailed diagnostics.
 
+
 ## Customization
 - Adjust `--num_records` to control the number of records.
 - Modify `sql_generator/data_generator.py` to support additional SQL data types or custom data rules (e.g., specific ranges for `INT`).
 - Change schema or output directory paths in `sql_generator/sql_generator.py` if needed.
-
 
 
 ## Supported Data Types
@@ -136,14 +141,12 @@ DEBUG: Shared values: [{'TYP_VVCF': "'XI'", 'weight': '810'}, ...]
 - Shared fields must have compatible data types across tables (uses the first encountered type).
 
 
-
 ## Future Improvements
 - Add support for more SQL data types (e.g., `TIMESTAMP`, `JSON`).
 - Implement custom value ranges or predefined lists for fields.
 - Handle foreign key constraints explicitly.
 - Support separate output files per table.
 - Add unit tests for modular components.
-
 
 
 ## Setup
@@ -159,6 +162,13 @@ Then run:
 ```bash
 generate-sql-inserts --num_records 3
 ```
+
+
+## AI Assistance
+- See `AI-GUIDE.md` for details on how AI tools (e.g., GitHub Copilot) can assist with code suggestions, debugging, documentation, and testing.
+- AI tools should follow the guidelines in `AI-GUIDE.md` to ensure suggestions align with the project’s goals (e.g., maintaining shared field consistency).
+
+
 
 ## License
 - MIT License
