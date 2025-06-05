@@ -39,23 +39,30 @@ class DataGenerator:
         elif base_type == 'BIT':
             return str(random.randint(0, 1))  # 0 or 1
         elif base_type in ('DECIMAL', 'FLOAT', 'DOUBLE'):
-            if base_type == 'DECIMAL' and length and precision:
-                # For DECIMAL(M,D), M is total digits, D is max decimal places
-                integer_digits = length - precision  # Digits before decimal
+            if base_type == 'DECIMAL' and length:
+                # For DECIMAL(M) or DECIMAL(M,D), M is total digits, D is max decimal places
+                decimal_places = precision if precision is not None else 0  # Default to 0 if precision is None
+                integer_digits = length - decimal_places  # Digits before decimal
                 if integer_digits < 0:
                     return "'0.0'"  # Invalid DECIMAL specification
                 # Generate integer part (up to integer_digits)
                 max_integer = 10 ** integer_digits - 1 if integer_digits > 0 else 0
                 integer_part = random.randint(0, max_integer)
+                if decimal_places == 0:
+                    return str(integer_part)
                 # Generate decimal part (0 to D digits)
-                decimal_digits = random.randint(0, precision)  # Random number of decimal places
+                decimal_digits = random.randint(0, decimal_places)  # Random number of decimal places
                 if decimal_digits == 0:
                     return str(integer_part)
                 decimal_part = ''.join(str(random.randint(0, 9)) for _ in range(decimal_digits))
                 value = f"{integer_part}.{decimal_part}"
                 return str(value)
+            elif base_type == 'DECIMAL':
+                # Handle DECIMAL without length as DECIMAL(10,0)
+                max_integer = 10 ** 10 - 1  # Up to 10 digits
+                return str(random.randint(0, max_integer))
             else:
-                # Fallback for FLOAT, DOUBLE, or DECIMAL without precision
+                # Fallback for FLOAT, DOUBLE
                 scale = precision if precision else 2
                 value = round(random.uniform(0, 1000), scale)
                 return str(value)
