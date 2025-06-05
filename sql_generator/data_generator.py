@@ -1,8 +1,8 @@
 # sql_generator/data_generator.py
-import re
 import random
 import string
 from datetime import datetime, timedelta
+from .utils import parse_data_type
 
 class DataGenerator:
     """Generates random test data based on column data type specifications."""
@@ -18,15 +18,10 @@ class DataGenerator:
         Returns:
             A string representation of the generated value.
         """
-        # Parse the data type
-        regex = r'(\w+)\s*(?:\((\d+)\s*(?:,\s*(\d+))?\))?\s*(\bNOT\s+NULL)?'
-        type_match = re.match(regex, full_data_type, re.IGNORECASE)
-        if not type_match:
+        try:
+            base_type, length, precision, _ = parse_data_type(full_data_type)
+        except ValueError:
             return "'Unknown'"
-        
-        base_type = type_match.group(1).upper()
-        length = int(type_match.group(2)) if type_match.group(2) else None
-        precision = int(type_match.group(3)) if type_match.group(3) else None
         
         if base_type in ('CHAR', 'VARCHAR'):
             gen_length = length if length else random.randint(5, 20)
