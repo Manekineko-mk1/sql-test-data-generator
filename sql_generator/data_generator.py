@@ -19,13 +19,14 @@ class DataGenerator:
             A string representation of the generated value.
         """
         # Parse the data type
-        type_match = re.match(r'(\w+)(\((\d+)(,(\d+))?\))?(\s+NOT\s+NULL)?', full_data_type, re.IGNORECASE)
+        regex = r'(\w+)\s*(?:\((\d+)(?:,(\d+))?\))?\s*(\bNOT\s+NULL)?'
+        type_match = re.match(regex, full_data_type, re.IGNORECASE)
         if not type_match:
             return "'Unknown'"
         
         base_type = type_match.group(1).upper()
-        length = int(type_match.group(3)) if type_match.group(3) else None
-        precision = int(type_match.group(5)) if type_match.group(5) else None
+        length = int(type_match.group(2)) if type_match.group(2) else None
+        precision = int(type_match.group(3)) if type_match.group(3) else None
         
         if base_type in ('CHAR', 'VARCHAR'):
             gen_length = length if length else random.randint(5, 20)
