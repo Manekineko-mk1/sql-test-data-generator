@@ -61,8 +61,13 @@ class DataGenerator:
                 scale = precision if precision else 2
                 value = round(random.uniform(0, 1000), scale)
                 return str(value)
-        elif base_type in ('DATE', 'DATETIME'):
+        elif base_type in ('DATE'):
             start_date = datetime(2020, 1, 1)
+            days_offset = random.randint(0, 365 * 5)
+            random_date = start_date + timedelta(days=days_offset)
+            return f"'{random_date.strftime('%Y-%m-%d')}'"
+        elif base_type in ('DATETIME'):
+            start_date = datetime.now() - timedelta(days=(365 * 5))
             days_offset = random.randint(0, 365 * 5)
             random_date = start_date + timedelta(days=days_offset)
             return f"'{random_date.strftime('%Y-%m-%d')}'"
